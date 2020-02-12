@@ -1,16 +1,26 @@
 {
+  "name": "validation-count-reporter",
   "version": "0.1.0",
+  "license": "ISC",
+  "description": "Reports XRP Ledger validation counts.",
+  "devDependencies": {
+    "@types/node": "^13.7.1",
+    "ts-node": "^8.6.2",
+    "typescript": "^3.7.5"
+  },
   "dependencies": {
-    "@slack/client": "^3.16.0",
-    "bluebird": "*",
-    "moment": "*",
-    "request": "^2.83.0",
-    "request-promise": "*",
+    "moment": "^2.24.0",
+    "reflect-metadata": "^0.1.13",
+    "request": "^2.88.2",
+    "request-promise-native": "^1.0.8",
     "ripple-address-codec": "^2.0.1",
     "ripple-binary-codec": "^0.1.12",
-    "ws": "*"
+    "slack-node": "^0.1.8",
+    "sqlite3": "^4.1.1",
+    "typeorm": "^0.2.22",
+    "ws": "^2.2.1"
   },
   "scripts": {
-    "start": "node index.js"
+    "start": "ts-node src/index.ts"
   }
 }
