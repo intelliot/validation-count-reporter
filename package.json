@@ -22,7 +22,7 @@
     "ws": "^2.2.1"
   },
   "scripts": {
-    "start": "ts-node src/index.ts",
+    "start": "yarn lint && ts-node src/index.ts",
     "lint": "prettier --write '**/*.{js,ts}'"
   }
 }
