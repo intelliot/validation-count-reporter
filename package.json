@@ -23,6 +23,6 @@
   },
   "scripts": {
     "start": "ts-node src/index.ts",
-    "lint": "prettier --write '**/*.ts'"
+    "lint": "prettier --write '**/*.{js,ts}'"
   }
 }
