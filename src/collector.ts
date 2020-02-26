@@ -6,7 +6,7 @@
  * - Stores validations
  */
 
-import {hexToBase58, remove, decodeManifest} from './utils'
+import { hexToBase58, remove, decodeManifest } from './utils'
 import * as request from 'request-promise-native'
 import * as moment from 'moment'
 import * as WebSocket from 'ws'
@@ -18,7 +18,6 @@ const names = require('../validator-names.json')
 // The validations stream sends messages whenever it receives validation messages,
 // also called validation votes, from validators it trusts.
 export interface ValidationMessage {
-
   // The value `validationReceived` indicates this is from the validations stream.
   type: 'validationReceived' // do not store
 
@@ -75,7 +74,6 @@ export interface ValidationMessage {
 
 // Associates a signing_key with a master_key (pubkey).
 export interface ManifestMessage {
-
   // The value `manifestReceived` indicates this is from the manifests stream.
   type: 'manifestReceived'
 
@@ -96,12 +94,12 @@ export interface ManifestMessage {
 }
 
 interface ValidationStreamOptions {
-  address: string,
-  onValidationReceived: (validationMessage: ValidationMessage) => void,
-  onManifestReceived: (manifestMessage: ManifestMessage) => void,
-  onClose: (cause: Error|{code: number, reason: string}) => void,
-  useHeartbeat?: boolean,
-  serverPingInterval?: number,
+  address: string
+  onValidationReceived: (validationMessage: ValidationMessage) => void
+  onManifestReceived: (manifestMessage: ManifestMessage) => void
+  onClose: (cause: Error | { code: number; reason: string }) => void
+  useHeartbeat?: boolean
+  serverPingInterval?: number
   latency?: number
 }
 
@@ -118,8 +116,8 @@ class ValidationStream {
     onClose,
     useHeartbeat = false,
     serverPingInterval = 30000,
-    latency = 1000
-  } : ValidationStreamOptions) {
+    latency = 1000,
+  }: ValidationStreamOptions) {
     this.ws = new WebSocket(address)
 
     if (useHeartbeat) {
@@ -135,7 +133,10 @@ class ValidationStream {
         // equal to the interval at which your server sends out pings plus a
         // conservative assumption of the latency.
         this.pingTimeout = setTimeout(() => {
-          console.error(`[${address}] WARNING: No heartbeat in ${serverPingInterval + latency} ms. Terminating...`)
+          console.error(
+            `[${address}] WARNING: No heartbeat in ${serverPingInterval +
+              latency} ms. Terminating...`,
+          )
           this.ws.terminate()
           // will be duplicated by code 1006 and reason ''
           onClose(new Error('Terminated due to lack of heartbeat'))
@@ -161,25 +162,30 @@ class ValidationStream {
     // control frame was malformed or not received then the close code must be
     // 1006.
     this.ws.on('close', (code: number, reason: string) => {
-      onClose({code, reason})
+      onClose({ code, reason })
     })
 
     this.ws.on('open', () => {
-      this.ws.send(JSON.stringify({
-        id: 1,
-        command: 'subscribe',
-        streams: ['validations']
-      }), () => {
-        // Subscribe to 'manifests' stream
-        this.ws.send(JSON.stringify({
-          id: 2,
+      this.ws.send(
+        JSON.stringify({
+          id: 1,
           command: 'subscribe',
-          streams: ['manifests']
-        }))
-      })
+          streams: ['validations'],
+        }),
+        () => {
+          // Subscribe to 'manifests' stream
+          this.ws.send(
+            JSON.stringify({
+              id: 2,
+              command: 'subscribe',
+              streams: ['manifests'],
+            }),
+          )
+        },
+      )
     })
 
-    this.ws.on('message', (data: string|Buffer|ArrayBuffer|Buffer[]) => {
+    this.ws.on('message', (data: string | Buffer | ArrayBuffer | Buffer[]) => {
       const dataObj = JSON.parse(data as string)
 
       if (dataObj.type === 'validationReceived') {
@@ -205,7 +211,9 @@ class ValidationStream {
       } else if (dataObj.error === 'unknownStream') {
         // One or more the members of the `streams` field of the request is not a valid stream name.
 
-        console.error(`[${address}] WARNING: 'unknownStream' message received. Terminating...`)
+        console.error(
+          `[${address}] WARNING: 'unknownStream' message received. Terminating...`,
+        )
         this.ws.terminate()
         onClose(new Error('Terminated due "unknownStream" message'))
       } else {
@@ -215,40 +223,40 @@ class ValidationStream {
   }
 
   readyState() {
-    switch(this.ws.readyState) {
+    switch (this.ws.readyState) {
       case 0: {
         return {
           state: 'CONNECTING',
           value: this.ws.readyState,
-          description: 'The connection is not yet open.'
+          description: 'The connection is not yet open.',
         }
       }
       case 1: {
         return {
           state: 'OPEN',
           value: this.ws.readyState,
-          description: 'The connection is open and ready to communicate.'
+          description: 'The connection is open and ready to communicate.',
         }
       }
       case 2: {
         return {
           state: 'CLOSING',
           value: this.ws.readyState,
-          description: 'The connection is in the process of closing.'
+          description: 'The connection is in the process of closing.',
         }
       }
       case 3: {
         return {
           state: 'CLOSED',
           value: this.ws.readyState,
-          description: 'The connection is closed.'
+          description: 'The connection is closed.',
         }
       }
       default: {
         return {
           state: 'UNKNOWN',
           value: this.ws.readyState,
-          description: 'The connection is in an unrecognized state.'
+          description: 'The connection is in an unrecognized state.',
         }
       }
     }
@@ -334,14 +342,16 @@ export class Network {
   }
 
   async subscribeToRippleds() {
-
     const onManifestReceived = async ({
       master_key,
       seq,
-      signing_key
+      signing_key,
     }: ManifestMessage) => {
       // master_key === validation_public_key_base58
-      if (this.validators[master_key] && this.validators[master_key].Sequence < seq) {
+      if (
+        this.validators[master_key] &&
+        this.validators[master_key].Sequence < seq
+      ) {
         // Delete old signing_key from manifestKeys
         delete this.manifestKeys[this.validators[master_key].signing_key]
 
@@ -363,31 +373,57 @@ export class Network {
           validation_public_key_base58: master_key,
           signing_key,
           Sequence: seq,
-          isFromManifestsStream: true
+          isFromManifestsStream: true,
         })
       }
     }
 
-    const onCloseAddress = (address: string, cause: Error|{code: number, reason: string}) => {
+    const onCloseAddress = (
+      address: string,
+      cause: Error | { code: number; reason: string },
+    ) => {
       if (this.validationStreams[address]) {
         if (this.validationStreams[address].readyState().state === 'OPEN') {
-          console.error(`[${this.network}] [${address}] onClose: UNEXPECTED readyState(): 'OPEN'`)
+          console.error(
+            `[${this.network}] [${address}] onClose: UNEXPECTED readyState(): 'OPEN'`,
+          )
         } else {
-          console.info(`[${this.network}] [${address}] onClose: readyState(): '${this.validationStreams[address].readyState().state}'`)
+          console.info(
+            `[${this.network}] [${address}] onClose: readyState(): '${
+              this.validationStreams[address].readyState().state
+            }'`,
+          )
         }
-        console.error(`[${this.network}] [${address}] onClose: Error/reason: ${JSON.stringify(cause, Object.getOwnPropertyNames(cause))}. Deleting...`)
+        console.error(
+          `[${
+            this.network
+          }] [${address}] onClose: Error/reason: ${JSON.stringify(
+            cause,
+            Object.getOwnPropertyNames(cause),
+          )}. Deleting...`,
+        )
         delete this.validationStreams[address]
       } else {
-        console.info(`[${this.network}] [${address}] onClose: Error/reason: ${JSON.stringify(cause, Object.getOwnPropertyNames(cause))}. Already deleted!`)
+        console.info(
+          `[${
+            this.network
+          }] [${address}] onClose: Error/reason: ${JSON.stringify(
+            cause,
+            Object.getOwnPropertyNames(cause),
+          )}. Already deleted!`,
+        )
       }
     }
 
-    const hostname = this.network === 'testnet' ? 'r.altnet.rippletest.net' : 'r.ripple.com'
+    const hostname =
+      this.network === 'testnet' ? 'r.altnet.rippletest.net' : 'r.ripple.com'
 
     return new Promise<void>((resolve, reject) => {
       dns.resolve4(hostname, (err, ips) => {
         if (err) {
-          console.error(`[${this.network}] ERROR: ${err} (Failed to resolve ${hostname})`)
+          console.error(
+            `[${this.network}] ERROR: ${err} (Failed to resolve ${hostname})`,
+          )
           return reject()
         }
         for (const ip of ips) {
@@ -397,7 +433,9 @@ export class Network {
               address,
               onValidationReceived: this.onValidationReceived,
               onManifestReceived,
-              onClose: (cause: Error|{code: number, reason: string}) => { onCloseAddress(address, cause) }
+              onClose: (cause: Error | { code: number; reason: string }) => {
+                onCloseAddress(address, cause)
+              },
             })
           }
         }
@@ -408,88 +446,128 @@ export class Network {
 
   async fetchName(validation_public_key_base58: string): Promise<string> {
     if (!this.names[validation_public_key_base58]) {
-      console.info(`[${this.network}] Attempting to retrieve name of ${validation_public_key_base58} from the Data API...`)
-      return request.get({
-        url: 'https://data.ripple.com/v2/network/validators/' + validation_public_key_base58,
-        json: true
-      }).then(data => {
-        if (data.domain) {
-          console.info(`[${this.network}] Retrieved name: ${data.domain} (${validation_public_key_base58})`)
-          this.names[validation_public_key_base58] = data.domain
-          return this.names[validation_public_key_base58]
-        } else {
-          console.warn(`[${this.network}] [${validation_public_key_base58}] No name available. Data: ${JSON.stringify(data)}`)
-        }
-        return validation_public_key_base58
-      }).catch(() => {
-        console.warn(`[${this.network}] [${validation_public_key_base58}] Request failed`)
-        return validation_public_key_base58
-      })
+      console.info(
+        `[${this.network}] Attempting to retrieve name of ${validation_public_key_base58} from the Data API...`,
+      )
+      return request
+        .get({
+          url:
+            'https://data.ripple.com/v2/network/validators/' +
+            validation_public_key_base58,
+          json: true,
+        })
+        .then((data) => {
+          if (data.domain) {
+            console.info(
+              `[${this.network}] Retrieved name: ${data.domain} (${validation_public_key_base58})`,
+            )
+            this.names[validation_public_key_base58] = data.domain
+            return this.names[validation_public_key_base58]
+          } else {
+            console.warn(
+              `[${
+                this.network
+              }] [${validation_public_key_base58}] No name available. Data: ${JSON.stringify(
+                data,
+              )}`,
+            )
+          }
+          return validation_public_key_base58
+        })
+        .catch(() => {
+          console.warn(
+            `[${this.network}] [${validation_public_key_base58}] Request failed`,
+          )
+          return validation_public_key_base58
+        })
     }
     return this.names[validation_public_key_base58]
   }
 
   async getUNL() {
-    const validatorListUrl = this.network === 'testnet' ? 'https://vl.altnet.rippletest.net' : 'https://vl.ripple.com'
+    const validatorListUrl =
+      this.network === 'testnet'
+        ? 'https://vl.altnet.rippletest.net'
+        : 'https://vl.ripple.com'
 
     return new Promise<void>((resolve, reject) => {
-      request.get({
-        url: validatorListUrl,
-        json: true
-      }).then(async (data) => {
-        const buffer = Buffer.from(data.blob, 'base64')
-        const validatorList = JSON.parse(buffer.toString('ascii'))
-        if (validatorList.sequence <= this.lastValidatorListSequence) {
-          // Nothing new here...
-          return resolve()
-        }
-        this.lastValidatorListSequence = validatorList.sequence
-        const validatorsToDelete = Object.keys(this.validators)
-        const isDuringStartup = (validatorsToDelete.length === 0)
-        for (const validator of validatorList.validators) {
-          const validation_public_key_base58 = hexToBase58(validator.validation_public_key)
-          remove(validatorsToDelete, validation_public_key_base58)
-
-          const manifest = decodeManifest(validator.manifest)
-          if (!this.validators[validation_public_key_base58] ||
-              this.validators[validation_public_key_base58].Sequence < manifest.Sequence) {
-            let isNewValidator = false
-            let isNewManifest = false
-            const signing_key = hexToBase58(manifest.SigningPubKey)
-            const Sequence = manifest.Sequence
-            if (this.validators[validation_public_key_base58]) {
-              this.validators[validation_public_key_base58].signing_key = signing_key
-              this.validators[validation_public_key_base58].Sequence = Sequence
-              isNewManifest = true
-            } else {
-              this.validators[validation_public_key_base58] = {
-                signing_key,
-                Sequence
-              }
-              isNewValidator = true
-              isNewManifest = true // always
-            }
-
-            const validatorName = await this.fetchName(validation_public_key_base58)
-            this.onUnlData({
-              isDuringStartup,
-              isNewValidator,
-              isNewManifest,
-              validatorName,
-              validation_public_key_base58,
-              signing_key,
-              Sequence
-            })
-            this.manifestKeys[signing_key] = validation_public_key_base58
+      request
+        .get({
+          url: validatorListUrl,
+          json: true,
+        })
+        .then(async (data) => {
+          const buffer = Buffer.from(data.blob, 'base64')
+          const validatorList = JSON.parse(buffer.toString('ascii'))
+          if (validatorList.sequence <= this.lastValidatorListSequence) {
+            // Nothing new here...
+            return resolve()
           }
-        } // for (const validator of validatorList.validators)
-        for (const validator of validatorsToDelete) {
-          delete this.validators[validator]
-        }
-        console.info(`[${this.network}] getUNL: Now have ${Object.keys(this.validators).length} validators and ${Object.keys(this.manifestKeys).length} manifestKeys`)
-      }).catch(err => {
-        return reject(err)
-      })
+          this.lastValidatorListSequence = validatorList.sequence
+          const validatorsToDelete = Object.keys(this.validators)
+          const isDuringStartup = validatorsToDelete.length === 0
+          for (const validator of validatorList.validators) {
+            const validation_public_key_base58 = hexToBase58(
+              validator.validation_public_key,
+            )
+            remove(validatorsToDelete, validation_public_key_base58)
+
+            const manifest = decodeManifest(validator.manifest)
+            if (
+              !this.validators[validation_public_key_base58] ||
+              this.validators[validation_public_key_base58].Sequence <
+                manifest.Sequence
+            ) {
+              let isNewValidator = false
+              let isNewManifest = false
+              const signing_key = hexToBase58(manifest.SigningPubKey)
+              const Sequence = manifest.Sequence
+              if (this.validators[validation_public_key_base58]) {
+                this.validators[
+                  validation_public_key_base58
+                ].signing_key = signing_key
+                this.validators[
+                  validation_public_key_base58
+                ].Sequence = Sequence
+                isNewManifest = true
+              } else {
+                this.validators[validation_public_key_base58] = {
+                  signing_key,
+                  Sequence,
+                }
+                isNewValidator = true
+                isNewManifest = true // always
+              }
+
+              const validatorName = await this.fetchName(
+                validation_public_key_base58,
+              )
+              this.onUnlData({
+                isDuringStartup,
+                isNewValidator,
+                isNewManifest,
+                validatorName,
+                validation_public_key_base58,
+                signing_key,
+                Sequence,
+              })
+              this.manifestKeys[signing_key] = validation_public_key_base58
+            }
+          } // for (const validator of validatorList.validators)
+          for (const validator of validatorsToDelete) {
+            delete this.validators[validator]
+          }
+          console.info(
+            `[${this.network}] getUNL: Now have ${
+              Object.keys(this.validators).length
+            } validators and ${
+              Object.keys(this.manifestKeys).length
+            } manifestKeys`,
+          )
+        })
+        .catch((err) => {
+          return reject(err)
+        })
     })
   }
 }

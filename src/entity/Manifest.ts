@@ -1,24 +1,26 @@
-import {Entity, PrimaryColumn, ManyToOne} from "typeorm";
-import {Validator} from "./Validator";
+import { Entity, PrimaryColumn, ManyToOne } from 'typeorm'
+import { Validator } from './Validator'
 
 @Entity()
 export class Manifest {
+  @PrimaryColumn()
+  master_key: string // PK
 
   @PrimaryColumn()
-  master_key: string; // PK
+  signing_key: string // PK
 
   @PrimaryColumn()
-  signing_key: string; // PK
+  seq: number // UInt // PK
 
   @PrimaryColumn()
-  seq: number; // UInt // PK
+  signature: string // PK
 
   @PrimaryColumn()
-  signature: string; // PK
+  master_signature: string // PK
 
-  @PrimaryColumn()
-  master_signature: string; // PK
-
-  @ManyToOne(type => Validator, validator => validator.manifests)
-  validator: Validator;
+  @ManyToOne(
+    (type) => Validator,
+    (validator) => validator.manifests,
+  )
+  validator: Validator
 }
